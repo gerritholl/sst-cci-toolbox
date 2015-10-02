@@ -1,284 +1,123 @@
-/*
- * Copyright (c) 2015 Brockmann Consult GmbH (info@brockmann-consult.de)
- *
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the Free
- * Software Foundation; either version 3 of the License, or (at your option)
- * any later version.
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, see http://www.gnu.org/licenses/
- */
-
 package org.esa.cci.sst.assessment;
 
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.esa.beam.util.io.WildcardMatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Properties;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CarTemplateTest {
 
-    private static Properties properties;
-    private static WordDocument wordDocument;
-    private static File dataDir;
+    private File dataDir;
+    private PoiWordDocument document;
+    private Properties properties;
 
-    @BeforeClass
-    public static void setUp() throws Exception {
-        wordDocument = new WordDocument(CarTemplateTest.class.getResource("car-template.docx"));
-
+    @Before
+    public void setUp() throws Exception {
+        document = new PoiWordDocument(CarTemplateTest.class.getResource("car-template.docx"));
         properties = new Properties();
         properties.load(CarTemplateTest.class.getResourceAsStream("car-template.properties"));
 
         dataDir = new File(System.getProperty("user.home"), "scratch/car/figures");
     }
 
-    @AfterClass
-    public static void tearDown() throws Exception {
-        wordDocument.save(new File("car.docx"));
+    @After
+    public void tearDown() throws Exception {
+        final File targetFile = new File("car.docx");
+        document.save(targetFile);
+
+        if (targetFile.isFile()) {
+            if (!targetFile.delete()) {
+                fail("Unable to delete test file");
+            }
+        }
     }
 
     @Test
     public void testReplaceComments() throws Exception {
-        String text;
+        String comment = properties.getProperty("comment.Figure_2");
+        assertTrue(document.containsVariable("${comment.Figure_2}"));
+        document.replaceParagraphText("${comment.Figure_2}", comment);
+        assertFalse(document.containsVariable("${comment.Figure_2}"));
 
-        text = properties.getProperty("comment.Figure_2");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.Figure_2}", text));
-
-        text = properties.getProperty("comment.Figure_3");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.Figure_3}", text));
-
-        text = properties.getProperty("comment.Figure_4");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.Figure_4}", text));
-
-        text = properties.getProperty("comment.Figure_5");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.Figure_5}", text));
-
-        text = properties.getProperty("comment.dec_plot_temp_strip_rel_to_first");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.dec_plot_temp_strip_rel_to_first}", text));
-
-        text = properties.getProperty("comment.decadal_selection");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.decadal_selection}", text));
-
-        text = properties.getProperty("comment.decadal_wall_1991");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.decadal_wall_1991}", text));
-
-        text = properties.getProperty("comment.decadal_wall_2001");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.decadal_wall_2001}", text));
-
-        text = properties.getProperty("comment.plot_lag_corr");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${comment.plot_lag_corr}", text));
+        comment = properties.getProperty("comment.Figure_3");
+        assertTrue(document.containsVariable("${comment.Figure_3}"));
+        document.replaceParagraphText("${comment.Figure_3}", comment);
+        assertFalse(document.containsVariable("${comment.Figure_3}"));
     }
 
     @Test
     public void testReplaceParagraphs() throws Exception {
-        String text;
+        // @todo 2 tb/tb the same functionality is already covered by the test above. Iterate with NR and GC about the
+        // variable names. Concequently all keys that start with paragraph replace a paragraph text. The comment.* keys then either
+        // are removed or should have another functionality. tb 2015-07-10
 
-        text = properties.getProperty("paragraph.summary_text");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${paragraph.summary_text}", text));
-
-        text = properties.getProperty("paragraph.plot_selection_COLOC");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${paragraph.plot_selection_COLOC}", text));
-
-        text = properties.getProperty("paragraph.plot_selection");
-
-        assertNotNull(text);
-
-        assertNotNull(wordDocument.replaceWithParagraph("${paragraph.plot_selection}", text));
+        String paragraph = properties.getProperty("paragraph.summary_text");
+        assertTrue(document.containsVariable("${paragraph.summary_text}"));
+        document.replaceParagraphText("${paragraph.summary_text}", paragraph);
+        assertFalse(document.containsVariable("${paragraph.summary_text}"));
     }
 
     @Test
-    public void testReplaceRegionMap() throws Exception {
-        if (dataDir.exists()) {
-            final String path = properties.getProperty("figure.region_map");
-
-            assertNotNull(path);
-
-            final File file = new File(dataDir, path);
-
-            assertTrue(file.exists());
-
-            assertNotNull(wordDocument.replaceWithImage("${figure.region_map}", file));
+    public void testReplaceVariableWithFigure() throws IOException, InvalidFormatException {
+        if (!dataDir.isDirectory()) {
+            System.out.println("data directory nor found, skipping `testReplaceVariableWithFigure`");
+            return;
         }
+
+        final String dependenceImage = properties.getProperty("figure.region_map");
+        File imageFile = new File(dataDir, dependenceImage);
+        assertTrue(document.containsVariable("${figure.region_map}"));
+        document.replaceWithFigure("${figure.region_map}", imageFile);
+        assertFalse(document.containsVariable("${figure.region_map}"));
+
+        final String spatialImage = properties.getProperty("figure.Figure_2");
+        imageFile = new File(dataDir, spatialImage);
+        assertTrue(document.containsVariable("${figure.Figure_2}"));
+        document.replaceWithFigure("${figure.Figure_2}", imageFile);
+        assertFalse(document.containsVariable("${figure.Figure_2}"));
     }
 
     @Test
-    public void testReplaceFigure_2() throws Exception {
-        if (dataDir.exists()) {
-            final String path = properties.getProperty("figure.Figure_2");
-
-            assertNotNull(path);
-
-            final File file = new File(dataDir, path);
-
-            assertTrue(file.exists());
-
-            assertNotNull(wordDocument.replaceWithImage("${figure.Figure_2}", file));
+    public void testReplaceVariableWithFigure_andScaling() throws IOException, InvalidFormatException {
+        if (!dataDir.isDirectory()) {
+            System.out.println("data directory nor found, skipping `testReplaceVariableWithFigure_andScaling`");
+            return;
         }
+
+        final String dependenceImage = properties.getProperty("figure.Figure_4");
+        final String scaleProperty = properties.getProperty("figure.Figure_4.scale");
+        File imageFile = new File(dataDir, dependenceImage);
+
+        assertTrue(document.containsVariable("${figure.Figure_4}"));
+        document.replaceWithFigure("${figure.Figure_4}", imageFile, Double.parseDouble(scaleProperty));
+        assertFalse(document.containsVariable("${figure.Figure_4}"));
     }
 
     @Test
-    public void testReplaceFigure_3() throws Exception {
-        if (dataDir.exists()) {
-            final String path = properties.getProperty("figure.Figure_3");
-
-            assertNotNull(path);
-
-            final File file = new File(dataDir, path);
-
-            assertTrue(file.exists());
-
-            assertNotNull(wordDocument.replaceWithImage("${figure.Figure_3}", file));
+    public void testReplaceFigures() throws Exception {
+        if (!dataDir.isDirectory()) {
+            System.out.println("Data directory for test is not installed. Test data is located at /fs1/projects/ongoing/SST-CCI/wp50");
+            return;
         }
+
+        final String filePattern = properties.getProperty("figures.dec_plot_temp_strip_rel_to_first");
+        assertNotNull(filePattern);
+
+        final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
+        assertTrue(files.length > 0);
+
+        assertTrue(document.containsVariable("${figures.dec_plot_temp_strip_rel_to_first}"));
+        document.replaceWithFigures("${figures.dec_plot_temp_strip_rel_to_first}", files);
+        assertFalse(document.containsVariable("${figures.dec_plot_temp_strip_rel_to_first}"));
     }
-
-    @Test
-    public void testReplaceFigure_4() throws Exception {
-        if (dataDir.exists()) {
-            final String path = properties.getProperty("figure.Figure_4");
-
-            assertNotNull(path);
-
-            final File file = new File(dataDir, path);
-
-            assertTrue(file.exists());
-
-            assertNotNull(wordDocument.replaceWithImage("${figure.Figure_4}", file));
-        }
-    }
-
-
-    @Test
-    public void testReplaceFigure_5() throws Exception {
-        if (dataDir.exists()) {
-            final String path = properties.getProperty("figure.Figure_5");
-
-            assertNotNull(path);
-
-            final File file = new File(dataDir, path);
-
-            assertTrue(file.exists());
-
-            assertNotNull(wordDocument.replaceWithImage("${figure.Figure_5}", file));
-        }
-    }
-
-    @Test
-    public void testReplaceFigures_dec_plot() throws Exception {
-        if (dataDir.exists()) {
-            final String filePattern = properties.getProperty("figures.dec_plot_temp_strip_rel_to_first");
-
-            assertNotNull(filePattern);
-
-            final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
-
-            assertTrue(files.length > 0);
-
-            assertNotNull(wordDocument.replaceWithImages("${figures.dec_plot_temp_strip_rel_to_first}", files));
-        }
-    }
-
-    @Test
-    public void testReplaceFigures_decadal_selection() throws Exception {
-        if (dataDir.exists()) {
-            final String filePattern = properties.getProperty("figures.decadal_selection");
-
-            assertNotNull(filePattern);
-
-            final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
-
-            assertTrue(files.length > 0);
-
-            assertNotNull(wordDocument.replaceWithImages("${figures.decadal_selection}", files));
-        }
-    }
-
-    @Test
-    public void testReplaceFigures_plot_selection_COLOC() throws Exception {
-        if (dataDir.exists()) {
-            final String filePattern = properties.getProperty("figures.plot_selection_COLOC");
-
-            assertNotNull(filePattern);
-
-            final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
-
-            assertTrue(files.length > 0);
-
-            assertNotNull(wordDocument.replaceWithImages("${figures.plot_selection_COLOC}", files));
-        }
-    }
-
-    @Test
-    public void testReplaceFigures_plot_selection() throws Exception {
-        if (dataDir.exists()) {
-            final String filePattern = properties.getProperty("figures.plot_selection");
-
-            assertNotNull(filePattern);
-
-            final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
-
-            assertTrue(files.length > 0);
-
-            assertNotNull(wordDocument.replaceWithImages("${figures.plot_selection}", files));
-        }
-    }
-
-    @Test
-    public void testReplaceFigures_lag_corr() throws Exception {
-        if (dataDir.exists()) {
-            final String filePattern = properties.getProperty("figures.plot_lag_corr");
-
-            assertNotNull(filePattern);
-
-            final File[] files = WildcardMatcher.glob(new File(dataDir, filePattern).getPath());
-
-            assertTrue(files.length > 0);
-
-            assertNotNull(wordDocument.replaceWithImages("${figures.plot_lag_corr}", files));
-        }
-    }
-
 }
