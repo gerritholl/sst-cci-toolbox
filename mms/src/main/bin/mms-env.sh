@@ -84,7 +84,7 @@ submit_job() {
     # Make sure directories for MMS_TASKS and MMS_LOG exist
     mkdir -p "$MMS_TASKS"
     mkdir -p "$MMS_LOG"
-    bsubmit="bsub -R rusage[mem=20480] -m lotus241 -W 24:00 -P esacci_sst -cwd ${MMS_INST} -oo ${MMS_LOG}/${jobname}.out -eo ${MMS_LOG}/${jobname}.err -J ${jobname} ${mms.home}/bin/${command} ${@:3}"
+    bsubmit="bsub -R rusage[mem=20480] -m lotus241 -W 24:00 -P esacci_sst -cwd ${MMS_INST} -oo ${MMS_LOG}/${jobname}.out -eo ${MMS_LOG}/${jobname}.err -J ${jobname} ${mms_home}/bin/${command} ${@:3}"
 
     rm -f ${MMS_LOG}/${jobname}.out
     rm -f ${MMS_LOG}/${jobname}.err

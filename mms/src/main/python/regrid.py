@@ -3,7 +3,7 @@ __author__ = 'Ralf Quast'
 from regridworkflow import RegridWorkflow
 
 usecase = "regrid"
-archive_root = "/group_workspaces/cems2/esacci_sst/output/v2.1.10"
+archive_root = "/group_workspaces/cems/nceo_uor/users/gholl/data/produced/sst_symlinks"
 target_root = "/group_workspaces/cems2/esacci_sst/scratch/2015_10_regridded_sst"
 
 w = RegridWorkflow(usecase, archive_root, target_root)
