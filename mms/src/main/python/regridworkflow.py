@@ -18,7 +18,7 @@ class RegridWorkflow(svrworkflow.SvrWorkflow):
     def get_regrid_period(self):
         return self.regrid_period
 
-    def run(self, hosts=[("localhost", 120)], calls=[], log_dir="trace", simulation=False):
+    def run(self, hosts=[("localhost", 99999)], calls=[], log_dir="trace", simulation=False):
 
         # Cannot run self.__get_monitor because name mangling makes
         # inheritance a pain.  Instead do manually what
