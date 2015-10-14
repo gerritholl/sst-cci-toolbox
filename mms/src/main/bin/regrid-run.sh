@@ -12,7 +12,7 @@ set -e
 
 # FIXME: this should not be hardcoded, but somehow coming from
 # configuration variables or from cmdline input
-propertiesrootdir="/home/users/gholl/projects/2015_esacci_sst_processing/sst_cci_test_results"
+propertiesrootdir="/home/users/gholl/projects/2015_esacci_sst_processing/2015_10_sst_cci_regrid_per_day"
 regrid="/group_workspaces/cems2/esacci_sst/software/sst-cci-tools/v2.0/bin/regrid"
 
 # Code starts here (you may have to adapt paths according to the organisation of input and output data)
